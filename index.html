@@ -1344,6 +1344,7 @@
       {btn:'sj-cert-disert-btn', panel:'sj-cert-disert-panel', buscador:'sj-cert-buscador-disert', lista:'sj-cert-lista-disert', sinResultados:'sj-cert-sin-resultados-disert'},
       {btn:'sj-cert-panel-btn', panel:'sj-cert-panel-panel', buscador:'sj-cert-buscador-panel', lista:'sj-cert-lista-panel', sinResultados:'sj-cert-sin-resultados-panel'}
     ];
+    var wired = [];
     paneles.forEach(function(cfg){
       var btn = document.getElementById(cfg.btn);
       var panel = document.getElementById(cfg.panel);
@@ -1351,14 +1352,27 @@
       var lista = document.getElementById(cfg.lista);
       var sinResultados = document.getElementById(cfg.sinResultados);
       if (!btn || !panel) return;
+
+      function resetBusqueda(){
+        if (!buscador || !lista) return;
+        buscador.value = '';
+        lista.querySelectorAll('li').forEach(function(li){ li.style.display = ''; });
+        if (sinResultados) sinResultados.hidden = true;
+      }
+      function cerrar(){
+        if (panel.hidden) return;
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        resetBusqueda();
+      }
+      function abrir(){
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        panel.scrollIntoView({behavior:'smooth', block:'start'});
+        if (buscador) buscador.focus();
+      }
       btn.addEventListener('click', function(){
-        var abierto = !panel.hidden;
-        panel.hidden = abierto;
-        btn.setAttribute('aria-expanded', String(!abierto));
-        if (!abierto) {
-          panel.scrollIntoView({behavior:'smooth', block:'start'});
-          if (buscador) buscador.focus();
-        }
+        if (panel.hidden) abrir(); else cerrar();
       });
       if (buscador && lista) {
         buscador.addEventListener('input', function(){
@@ -1374,7 +1388,22 @@
           if (sinResultados) sinResultados.hidden = visibles !== 0;
         });
       }
+      wired.push({panel: panel, cerrar: cerrar});
     });
+
+    // Si la sección de certificados sale de pantalla (scrolleás para arriba o para abajo),
+    // los paneles abiertos se cierran solos y vuelven al estado inicial.
+    var seccion = document.getElementById('certificados');
+    if (seccion && 'IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (!entry.isIntersecting) {
+            wired.forEach(function(w){ w.cerrar(); });
+          }
+        });
+      }, {threshold: 0});
+      observer.observe(seccion);
+    }
   })();
   </script>
 
